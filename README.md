@@ -6,9 +6,9 @@ A powerful interface for extending AI capabilities through remote control, calcu
 
 ## Overview | 概述
 
-MCP (Model Context Protocol) is a protocol that allows servers to expose tools that can be invoked by language models. Tools enable models to interact with external systems, such as querying databases, calling APIs, or performing computations. Each tool is uniquely identified by a name and includes metadata describing its schema.
+MCP (Model Context Protocol) is a protocol that allows servers to expose tools that can be invoked by language models. Tools enable models to interact with external systems, such as querying databases, calling APIs, or executing tasks.
 
-MCP（模型上下文协议）是一个允许服务器向语言模型暴露可调用工具的协议。这些工具使模型能够与外部系统交互，例如查询数据库、调用API或执行计算。每个工具都由一个唯一的名称标识，并包含描述其模式的元数据。
+MCP（模型上下文协议）是一个允许服务器向语言模型暴露可调用工具的协议。这些工具使模型能够与外部系统交互，例如查询数据库、调用API或执行任务。
 
 ## Features | 特性
 
@@ -33,7 +33,7 @@ export MCP_ENDPOINT=<your_ws_endpoint>
 # Windows (PowerShell): $env:MCP_ENDPOINT="<your_ws_endpoint>"
 ```
 
-3) Run (from config) | 运行（基于配置）
+3) Run | 运行
 
 ```bash
 python mcp_pipe.py
@@ -54,7 +54,7 @@ python mcp_pipe.py calculator.py
 ## Config-driven Servers | 通过配置驱动的服务
 
 - 修改 `mcp_config.json`（或设置 `MCP_CONFIG` 指向该文件）来定义 `mcpServers` 列表。
-- 无参数时启动所有配置的服务；如需单个运行，请传入本地脚本路径。
+- 无参数时启动所有配置的服务（自动跳过配置里 disabled: true 的条目）；如需单个运行，请传入本地脚本路径。
 - 说明：type=stdio 直接启动；type=sse/http 通过 `python -m mcp_proxy` 代理到 stdio。
 
 ## Creating Your Own MCP Tools | 创建自己的MCP工具
@@ -97,7 +97,7 @@ if __name__ == "__main__":
 
 Contributions are welcome! Please feel free to submit a Pull Request.
 
-欢迎贡献代码！请随时提交Pull Request。
+欢迎贡献代码！请随时提交PullRequest。
 
 ## License | 许可证
 

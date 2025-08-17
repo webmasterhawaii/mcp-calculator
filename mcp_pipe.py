@@ -255,11 +255,16 @@ if __name__ == "__main__":
     async def _main():
         if not target_arg:
             cfg = load_config()
-            servers = list((cfg.get("mcpServers") or {}).keys())
-            if not servers:
-                raise RuntimeError("No mcpServers found in config")
-            logger.info(f"Starting all servers: {', '.join(servers)}")
-            tasks = [asyncio.create_task(connect_with_retry(endpoint_url, t)) for t in servers]
+            servers_cfg = (cfg.get("mcpServers") or {})
+            all_servers = list(servers_cfg.keys())
+            enabled = [name for name, entry in servers_cfg.items() if not (entry or {}).get("disabled")]
+            skipped = [name for name in all_servers if name not in enabled]
+            if skipped:
+                logger.info(f"Skipping disabled servers: {', '.join(skipped)}")
+            if not enabled:
+                raise RuntimeError("No enabled mcpServers found in config")
+            logger.info(f"Starting servers: {', '.join(enabled)}")
+            tasks = [asyncio.create_task(connect_with_retry(endpoint_url, t)) for t in enabled]
             # Run all forever; if any crashes it will auto-retry inside
             await asyncio.gather(*tasks)
         else:
