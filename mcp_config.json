@@ -1,14 +1,19 @@
 {
   "mcpServers": {
-    "calculator": {
-      "timeout": 60,
+    "local-stdio-calculator": {
       "type": "stdio",
       "command": "python",
       "args": ["-m", "calculator"]
     },
-    "desktop-commander": {
-      "command": "npx",
-      "args": ["-y", "@wonderwhy-er/desktop-commander"]
+    "remote-sse-server": {
+      "type": "sse",
+      "url": "https://api.example.com/sse",
+      "disabled": true
+    },
+    "remote-http-server": {
+      "type": "http",
+      "url": "https://api.example.com/mcp",
+      "disabled": true
     }
   }
 }
