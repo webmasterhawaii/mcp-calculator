@@ -6,9 +6,9 @@ A powerful interface for extending AI capabilities through remote control, calcu
 
 ## Overview | 概述
 
-MCP (Model Context Protocol) is a protocol that allows servers to expose tools that can be invoked by language models. Tools enable models to interact with external systems, such as querying databases, calling APIs, or executing tasks.
+MCP (Model Context Protocol) is a protocol that allows servers to expose tools that can be invoked by language models. Tools enable models to interact with external systems, such as querying databases, calling APIs, or performing computations. Each tool is uniquely identified by a name and includes metadata describing its schema.
 
-MCP（模型上下文协议）是一个允许服务器向语言模型暴露可调用工具的协议。这些工具使模型能够与外部系统交互，例如查询数据库、调用API或执行任务。
+MCP（模型上下文协议）是一个允许服务器向语言模型暴露可调用工具的协议。这些工具使模型能够与外部系统交互，例如查询数据库、调用API或执行计算。每个工具都由一个唯一的名称标识，并包含描述其模式的元数据。
 
 ## Features | 特性
 
@@ -17,33 +17,33 @@ MCP（模型上下文协议）是一个允许服务器向语言模型暴露可�
 - 📊 Real-time data streaming | 实时数据流传输
 - 🛠️ Easy-to-use tool creation interface | 简单易用的工具创建接口
 - 🔒 Secure WebSocket communication | 安全的WebSocket通信
+- ⚙️ Multiple transport types support (stdio/sse/http) | 支持多种传输类型（stdio/sse/http）
 
 ## Quick Start | 快速开始
 
-1) Install deps | 安装依赖
-
+1. Install dependencies | 安装依赖:
 ```bash
 pip install -r requirements.txt
 ```
 
-2) Set endpoint | 设置环境变量
-
+2. Set up environment variables | 设置环境变量:
 ```bash
-export MCP_ENDPOINT=<your_ws_endpoint>
-# Windows (PowerShell): $env:MCP_ENDPOINT="<your_ws_endpoint>"
+export MCP_ENDPOINT=<your_mcp_endpoint>
 ```
 
-3) Run | 运行
+3. Run the calculator example | 运行计算器示例:
+```bash
+python mcp_pipe.py calculator.py
+```
 
+Or run all configured servers | 或运行所有配置的服务:
 ```bash
 python mcp_pipe.py
 ```
 
-Run a single local server script | 运行单个本地脚本服务
+*Requires `mcp_config.json` configuration file with server definitions (supports stdio/sse/http transport types)*
 
-```bash
-python mcp_pipe.py calculator.py
-```
+*需要 `mcp_config.json` 配置文件定义服务器（支持 stdio/sse/http 传输类型）*
 
 ## Project Structure | 项目结构
 
@@ -53,9 +53,12 @@ python mcp_pipe.py calculator.py
 
 ## Config-driven Servers | 通过配置驱动的服务
 
-- 修改 `mcp_config.json`（或设置 `MCP_CONFIG` 指向该文件）来定义 `mcpServers` 列表。
-- 无参数时启动所有配置的服务（自动跳过配置里 disabled: true 的条目）；如需单个运行，请传入本地脚本路径。
-- 说明：type=stdio 直接启动；type=sse/http 通过 `python -m mcp_proxy` 代理到 stdio。
+编辑 `mcp_config.json` 文件来配置服务器列表（也可设置 `MCP_CONFIG` 环境变量指向其他配置文件）。
+
+配置说明：
+- 无参数时启动所有配置的服务（自动跳过 `disabled: true` 的条目）
+- 有参数时运行单个本地脚本文件
+- `type=stdio` 直接启动；`type=sse/http` 通过 `python -m mcp_proxy` 代理
 
 ## Creating Your Own MCP Tools | 创建自己的MCP工具
 
@@ -89,6 +92,7 @@ if __name__ == "__main__":
 
 - Python 3.7+
 - websockets>=11.0.3
+- python-dotenv>=1.0.0
 - mcp>=1.8.1
 - pydantic>=2.11.4
 - mcp-proxy>=0.8.2
@@ -97,7 +101,7 @@ if __name__ == "__main__":
 
 Contributions are welcome! Please feel free to submit a Pull Request.
 
-欢迎贡献代码！请随时提交PullRequest。
+欢迎贡献代码！请随时提交Pull Request。
 
 ## License | 许可证
 

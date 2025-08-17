@@ -249,7 +249,7 @@ if __name__ == "__main__":
         logger.error("Please set the `MCP_ENDPOINT` environment variable")
         sys.exit(1)
     
-    # Determine target: default to all if no arg; support single target or explicit 'all'
+    # Determine target: default to all if no arg; single target otherwise
     target_arg = sys.argv[1] if len(sys.argv) >= 2 else None
 
     async def _main():
@@ -268,9 +268,6 @@ if __name__ == "__main__":
             # Run all forever; if any crashes it will auto-retry inside
             await asyncio.gather(*tasks)
         else:
-            if target_arg.lower() == "all":
-                logger.error("Pass no arguments to start all configured servers. To run a single server, provide a local Python script path.")
-                sys.exit(1)
             if os.path.exists(target_arg):
                 await connect_with_retry(endpoint_url, target_arg)
             else:
