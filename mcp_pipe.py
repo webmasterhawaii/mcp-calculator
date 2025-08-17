@@ -4,10 +4,14 @@ Version: 0.3.0
 
 Usage (env):
     export MCP_ENDPOINT=<ws_endpoint>
+    # Windows (PowerShell): $env:MCP_ENDPOINT = "<ws_endpoint>"
 
-Start server process(es):
-All configured servers: start one pipe per server concurrently
+Start server process(es) from config:
+Run all configured servers (default)
     python mcp_pipe.py
+
+Run a single local server script (back-compat)
+    python mcp_pipe.py path/to/server.py
 
 Config discovery order:
     $MCP_CONFIG, then ./mcp_config.json
@@ -23,12 +27,10 @@ import logging
 import os
 import signal
 import sys
-import random
 import json
-# (No .env auto-loading; rely on environment being set by caller)
 from dotenv import load_dotenv
 
-# Load environment variables from .env file (restores original behavior)
+# Auto-load environment variables from a .env file if present
 load_dotenv()
 
 # Configure logging
@@ -49,9 +51,8 @@ async def connect_with_retry(uri, target):
     while True:  # Infinite reconnection
         try:
             if reconnect_attempt > 0:
-                wait_time = backoff * (1 + random.random() * 0.1)  # Add some random jitter
-                logger.info(f"[{target}] Waiting {wait_time:.2f}s before reconnection attempt {reconnect_attempt}...")
-                await asyncio.sleep(wait_time)
+                logger.info(f"[{target}] Waiting {backoff}s before reconnection attempt {reconnect_attempt}...")
+                await asyncio.sleep(backoff)
 
             # Attempt to connect
             await connect_to_server(uri, target)
@@ -131,9 +132,7 @@ async def pipe_process_to_websocket(process, websocket, target):
     try:
         while True:
             # Read data from process stdout
-            data = await asyncio.get_event_loop().run_in_executor(
-                None, process.stdout.readline
-            )
+            data = await asyncio.to_thread(process.stdout.readline)
             
             if not data:  # If no data, the process may have ended
                 logger.info(f"[{target}] Process has ended output")
@@ -152,9 +151,7 @@ async def pipe_process_stderr_to_terminal(process, target):
     try:
         while True:
             # Read data from process stderr
-            data = await asyncio.get_event_loop().run_in_executor(
-                None, process.stderr.readline
-            )
+            data = await asyncio.to_thread(process.stderr.readline)
             
             if not data:  # If no data, the process may have ended
                 logger.info(f"[{target}] Process has ended stderr output")
@@ -171,9 +168,6 @@ def signal_handler(sig, frame):
     """Handle interrupt signals"""
     logger.info("Received interrupt signal, shutting down...")
     sys.exit(0)
-
-
-# ---------- Simple config + command builder ----------
 
 def load_config():
     """Load JSON config from $MCP_CONFIG or ./mcp_config.json. Return dict or {}."""
@@ -192,7 +186,8 @@ def build_server_command(target=None):
     """Build [cmd,...] and env for the server process for a given target.
 
     Priority:
-    - target must match a server in config.mcpServers
+    - If target matches a server in config.mcpServers: use its definition
+    - Else: treat target as a Python script path (back-compat)
     If target is None, read from sys.argv[1].
     """
     if target is None:
@@ -236,16 +231,17 @@ def build_server_command(target=None):
 
         raise RuntimeError(f"Unsupported server type: {typ}")
 
-    # No fallback: only configured servers are supported
-    raise RuntimeError(
-        f"'{target}' is not a configured server in mcp_config.json"
-    )
+    # Fallback to script path (back-compat)
+    script_path = target
+    if not os.path.exists(script_path):
+        raise RuntimeError(
+            f"'{target}' is neither a configured server nor an existing script"
+        )
+    return [sys.executable, script_path], os.environ.copy()
 
 if __name__ == "__main__":
     # Register signal handler
     signal.signal(signal.SIGINT, signal_handler)
-    
-    # No arguments supported; always runs all configured servers
     
     # Get token from environment variable or command line arguments
     endpoint_url = os.environ.get('MCP_ENDPOINT')
@@ -253,20 +249,28 @@ if __name__ == "__main__":
         logger.error("Please set the `MCP_ENDPOINT` environment variable")
         sys.exit(1)
     
-    # Reject any arguments; no CLI args are supported
-    if len(sys.argv) >= 2:
-        logger.error("This script takes no arguments. Run: python mcp_pipe.py")
-        sys.exit(1)
+    # Determine target: default to all if no arg; support single target or explicit 'all'
+    target_arg = sys.argv[1] if len(sys.argv) >= 2 else None
 
     async def _main():
-        cfg = load_config()
-        servers = list((cfg.get("mcpServers") or {}).keys())
-        if not servers:
-            raise RuntimeError("No mcpServers found in config")
-        logger.info(f"Starting all servers: {', '.join(servers)}")
-        tasks = [asyncio.create_task(connect_with_retry(endpoint_url, t)) for t in servers]
-        # Run all forever; if any crashes it will auto-retry inside
-        await asyncio.gather(*tasks)
+        if not target_arg:
+            cfg = load_config()
+            servers = list((cfg.get("mcpServers") or {}).keys())
+            if not servers:
+                raise RuntimeError("No mcpServers found in config")
+            logger.info(f"Starting all servers: {', '.join(servers)}")
+            tasks = [asyncio.create_task(connect_with_retry(endpoint_url, t)) for t in servers]
+            # Run all forever; if any crashes it will auto-retry inside
+            await asyncio.gather(*tasks)
+        else:
+            if target_arg.lower() == "all":
+                logger.error("Pass no arguments to start all configured servers. To run a single server, provide a local Python script path.")
+                sys.exit(1)
+            if os.path.exists(target_arg):
+                await connect_with_retry(endpoint_url, target_arg)
+            else:
+                logger.error("Argument must be a local Python script path. To run configured servers, run without arguments.")
+                sys.exit(1)
 
     try:
         asyncio.run(_main())

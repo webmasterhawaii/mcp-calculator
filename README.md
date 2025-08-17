@@ -28,22 +28,21 @@ pip install -r requirements.txt
 
 2) Set endpoint | 设置环境变量
 
-Fish:
-
-```fish
-set -x MCP_ENDPOINT <your_ws_endpoint>
-```
-
-Bash/zsh:
-
 ```bash
 export MCP_ENDPOINT=<your_ws_endpoint>
+# Windows (PowerShell): $env:MCP_ENDPOINT="<your_ws_endpoint>"
 ```
 
-3) Run (all servers) | 运行（全部服务）
+3) Run (from config) | 运行（基于配置）
 
 ```bash
 python mcp_pipe.py
+```
+
+Run a single local server script | 运行单个本地脚本服务
+
+```bash
+python mcp_pipe.py calculator.py
 ```
 
 ## Project Structure | 项目结构
@@ -55,7 +54,7 @@ python mcp_pipe.py
 ## Config-driven Servers | 通过配置驱动的服务
 
 - 修改 `mcp_config.json`（或设置 `MCP_CONFIG` 指向该文件）来定义 `mcpServers` 列表。
-- 运行时默认同时启动所有配置的服务；仅支持 “all” 模式。
+- 无参数时启动所有配置的服务；如需单个运行，请传入本地脚本路径。
 - 说明：type=stdio 直接启动；type=sse/http 通过 `python -m mcp_proxy` 代理到 stdio。
 
 ## Creating Your Own MCP Tools | 创建自己的MCP工具
@@ -90,7 +89,6 @@ if __name__ == "__main__":
 
 - Python 3.7+
 - websockets>=11.0.3
-- python-dotenv>=1.0.0
 - mcp>=1.8.1
 - pydantic>=2.11.4
 - mcp-proxy>=0.8.2
