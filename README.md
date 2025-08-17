@@ -20,19 +20,30 @@ MCP（模型上下文协议）是一个允许服务器向语言模型暴露可�
 
 ## Quick Start | 快速开始
 
-1. Install dependencies | 安装依赖:
+1) Install deps | 安装依赖
+
 ```bash
 pip install -r requirements.txt
 ```
 
-2. Set up environment variables | 设置环境变量:
-```bash
-export MCP_ENDPOINT=<your_mcp_endpoint>
+2) Set endpoint | 设置环境变量
+
+Fish:
+
+```fish
+set -x MCP_ENDPOINT <your_ws_endpoint>
 ```
 
-3. Run the calculator example | 运行计算器示例:
+Bash/zsh:
+
 ```bash
-python mcp_pipe.py calculator.py
+export MCP_ENDPOINT=<your_ws_endpoint>
+```
+
+3) Run (all servers) | 运行（全部服务）
+
+```bash
+python mcp_pipe.py
 ```
 
 ## Project Structure | 项目结构
@@ -40,6 +51,12 @@ python mcp_pipe.py calculator.py
 - `mcp_pipe.py`: Main communication pipe that handles WebSocket connections and process management | 处理WebSocket连接和进程管理的主通信管道
 - `calculator.py`: Example MCP tool implementation for mathematical calculations | 用于数学计算的MCP工具示例实现
 - `requirements.txt`: Project dependencies | 项目依赖
+
+## Config-driven Servers | 通过配置驱动的服务
+
+- 修改 `mcp_config.json`（或设置 `MCP_CONFIG` 指向该文件）来定义 `mcpServers` 列表。
+- 运行时默认同时启动所有配置的服务；仅支持 “all” 模式。
+- 说明：type=stdio 直接启动；type=sse/http 通过 `python -m mcp_proxy` 代理到 stdio。
 
 ## Creating Your Own MCP Tools | 创建自己的MCP工具
 
@@ -76,6 +93,7 @@ if __name__ == "__main__":
 - python-dotenv>=1.0.0
 - mcp>=1.8.1
 - pydantic>=2.11.4
+- mcp-proxy>=0.8.2
 
 ## Contributing | 贡献指南
 

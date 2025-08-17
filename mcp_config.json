@@ -1,0 +1,14 @@
+{
+  "mcpServers": {
+    "calculator": {
+      "timeout": 60,
+      "type": "stdio",
+      "command": "python",
+      "args": ["-m", "calculator"]
+    },
+    "desktop-commander": {
+      "command": "npx",
+      "args": ["-y", "@wonderwhy-er/desktop-commander"]
+    }
+  }
+}
