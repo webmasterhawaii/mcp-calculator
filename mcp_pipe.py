@@ -1,6 +1,6 @@
 """
 Simple MCP stdio <-> WebSocket pipe with optional unified config.
-Version: 0.3.0
+Version: 0.2.0
 
 Usage (env):
     export MCP_ENDPOINT=<ws_endpoint>
