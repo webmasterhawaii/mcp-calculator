@@ -17,6 +17,7 @@ MCP（模型上下文协议）是一个允许服务器向语言模型暴露可�
 - 📊 Real-time data streaming | 实时数据流传输
 - 🛠️ Easy-to-use tool creation interface | 简单易用的工具创建接口
 - 🔒 Secure WebSocket communication | 安全的WebSocket通信
+- ⚙️ Multiple transport types support (stdio/sse/http) | 支持多种传输类型（stdio/sse/http）
 
 ## Quick Start | 快速开始
 
@@ -35,11 +36,29 @@ export MCP_ENDPOINT=<your_mcp_endpoint>
 python mcp_pipe.py calculator.py
 ```
 
+Or run all configured servers | 或运行所有配置的服务:
+```bash
+python mcp_pipe.py
+```
+
+*Requires `mcp_config.json` configuration file with server definitions (supports stdio/sse/http transport types)*
+
+*需要 `mcp_config.json` 配置文件定义服务器（支持 stdio/sse/http 传输类型）*
+
 ## Project Structure | 项目结构
 
 - `mcp_pipe.py`: Main communication pipe that handles WebSocket connections and process management | 处理WebSocket连接和进程管理的主通信管道
 - `calculator.py`: Example MCP tool implementation for mathematical calculations | 用于数学计算的MCP工具示例实现
 - `requirements.txt`: Project dependencies | 项目依赖
+
+## Config-driven Servers | 通过配置驱动的服务
+
+编辑 `mcp_config.json` 文件来配置服务器列表（也可设置 `MCP_CONFIG` 环境变量指向其他配置文件）。
+
+配置说明：
+- 无参数时启动所有配置的服务（自动跳过 `disabled: true` 的条目）
+- 有参数时运行单个本地脚本文件
+- `type=stdio` 直接启动；`type=sse/http` 通过 `python -m mcp_proxy` 代理
 
 ## Creating Your Own MCP Tools | 创建自己的MCP工具
 
@@ -76,6 +95,7 @@ if __name__ == "__main__":
 - python-dotenv>=1.0.0
 - mcp>=1.8.1
 - pydantic>=2.11.4
+- mcp-proxy>=0.8.2
 
 ## Contributing | 贡献指南
 
