@@ -1,6 +1,6 @@
 """
 Simple MCP stdio <-> WebSocket pipe with optional unified config.
-Version: 0.2.1
+Version: 0.2.2
 
 Usage (env):
     export MCP_ENDPOINT=<ws_endpoint>
@@ -196,6 +196,10 @@ def build_server_command(target=None):
                 cmd += ["-H", hk, str(hv)]
             cmd.append(url)
             return cmd, child_env
+
+        if typ == "ws":
+            logger.info(f"[{target}] WS type detected; running no-op bridge for persistent connection")
+            return [sys.executable, "-c", "import time; time.sleep(9999999)"], child_env
 
         raise RuntimeError(f"Unsupported server type: {typ}")
 
