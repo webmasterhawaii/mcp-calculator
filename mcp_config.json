@@ -1,8 +1,9 @@
 {
   "servers": [
     {
-      "name": "n8n-endpoint",
+      "name": "remote-mcp-server",
       "type": "ws",
+      "transport": "ws",
       "url": "wss://api.xiaozhi.me/mcp/?token=eyJhbGciOiJFUzI1NiIsInR5cCI6IkpXVCJ9.eyJ1c2VySWQiOjQ1MjIzNywiYWdlbnRJZCI6NTkzMzA0LCJlbmRwb2ludElkIjoiYWdlbnRfNTkzMzA0IiwicHVycG9zZSI6Im1jcC1lbmRwb2ludCJ9.4yz-uNZmUhLXJWZ7DnytFeWlxq5Z5qAXyV5hS76qlNewcv_DT3F1HGzlAWngxsaQbd462zAsgwo5jwawvlr8wA",
       "enabled": true
     }
