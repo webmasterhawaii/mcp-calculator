@@ -1,23 +1,17 @@
 """
 Simple MCP stdio <-> WebSocket pipe with optional unified config.
-Version: 0.2.2
+Version: 0.2.3
 
 Usage (env):
     export MCP_ENDPOINT=<ws_endpoint>
     # Windows (PowerShell): $env:MCP_ENDPOINT = "<ws_endpoint>"
 
 Start server process(es) from config:
-Run all configured servers (default)
-    python mcp_pipe.py
-
-Run a single local server script (back-compat)
-    python mcp_pipe.py path/to/server.py
+    python mcp_pipe.py           # Run all configured servers
+    python mcp_pipe.py script.py # Run a local script
 
 Config discovery order:
     $MCP_CONFIG, then ./mcp_config.json
-
-Env overrides:
-    (none for proxy; uses current Python: python -m mcp_proxy)
 """
 
 import asyncio
@@ -42,6 +36,7 @@ logger = logging.getLogger('MCP_PIPE')
 INITIAL_BACKOFF = 1
 MAX_BACKOFF = 600
 
+
 async def connect_with_retry(uri, target):
     reconnect_attempt = 0
     backoff = INITIAL_BACKOFF
@@ -56,12 +51,31 @@ async def connect_with_retry(uri, target):
             logger.warning(f"[{target}] Connection closed (attempt {reconnect_attempt}): {e}")
             backoff = min(backoff * 2, MAX_BACKOFF)
 
+
 async def connect_to_server(uri, target):
     try:
         logger.info(f"[{target}] Connecting to WebSocket server...")
         async with websockets.connect(uri) as websocket:
             logger.info(f"[{target}] Successfully connected to WebSocket server")
+
+            # Load initMessage from config (if any)
+            cfg = load_config()
+            entry = (cfg.get("mcpServers") or {}).get(target, {})
+            init_msg = entry.get("initMessage")
+            if init_msg:
+                try:
+                    await websocket.send(json.dumps(init_msg))
+                    logger.info(f"[{target}] Sent initMessage: {init_msg}")
+                except Exception as e:
+                    logger.warning(f"[{target}] Failed to send initMessage: {e}")
+
+            # Get command or run noop if ws type
             cmd, env = build_server_command(target)
+            if cmd == ["noop"]\:
+                logger.info(f"[{target}] No-op bridge active, holding connection...")
+                await asyncio.Future()
+                return
+
             process = subprocess.Popen(
                 cmd,
                 stdin=subprocess.PIPE,
@@ -71,6 +85,7 @@ async def connect_to_server(uri, target):
                 text=True,
                 env=env
             )
+
             logger.info(f"[{target}] Started server process: {' '.join(cmd)}")
             await asyncio.gather(
                 pipe_websocket_to_process(websocket, process, target),
@@ -93,6 +108,7 @@ async def connect_to_server(uri, target):
                 process.kill()
             logger.info(f"[{target}] Server process terminated")
 
+
 async def pipe_websocket_to_process(websocket, process, target):
     try:
         while True:
@@ -109,6 +125,7 @@ async def pipe_websocket_to_process(websocket, process, target):
         if not process.stdin.closed:
             process.stdin.close()
 
+
 async def pipe_process_to_websocket(process, websocket, target):
     try:
         while True:
@@ -121,6 +138,7 @@ async def pipe_process_to_websocket(process, websocket, target):
     except Exception as e:
         logger.error(f"[{target}] Error in process to WebSocket pipe: {e}")
         raise
+
 
 async def pipe_process_stderr_to_terminal(process, target):
     try:
@@ -135,9 +153,11 @@ async def pipe_process_stderr_to_terminal(process, target):
         logger.error(f"[{target}] Error in process stderr pipe: {e}")
         raise
 
+
 def signal_handler(sig, frame):
     logger.info("Received interrupt signal, shutting down...")
     sys.exit(0)
+
 
 def substitute_env_vars(obj):
     if isinstance(obj, dict):
@@ -149,17 +169,18 @@ def substitute_env_vars(obj):
     else:
         return obj
 
+
 def load_config():
     path = os.environ.get("MCP_CONFIG") or os.path.join(os.getcwd(), "mcp_config.json")
     if not os.path.exists(path):
         return {}
     try:
         with open(path, "r", encoding="utf-8") as f:
-            raw = json.load(f)
-            return substitute_env_vars(raw)
+            return substitute_env_vars(json.load(f))
     except Exception as e:
         logger.warning(f"Failed to load config {path}: {e}")
         return {}
+
 
 def build_server_command(target=None):
     if target is None:
@@ -191,22 +212,21 @@ def build_server_command(target=None):
             cmd = [sys.executable, "-m", "mcp_proxy"]
             if typ in ("http", "streamablehttp"):
                 cmd += ["--transport", "streamablehttp"]
-            headers = entry.get("headers") or {}
-            for hk, hv in headers.items():
+            for hk, hv in (entry.get("headers") or {}).items():
                 cmd += ["-H", hk, str(hv)]
             cmd.append(url)
             return cmd, child_env
 
         if typ == "ws":
-            logger.info(f"[{target}] WS type detected; running no-op bridge for persistent connection")
-            return [sys.executable, "-c", "import time; time.sleep(9999999)"], child_env
+            return ["noop"], child_env
 
         raise RuntimeError(f"Unsupported server type: {typ}")
 
-    script_path = target
-    if not os.path.exists(script_path):
+    if os.path.exists(target):
+        return [sys.executable, target], os.environ.copy()
+    else:
         raise RuntimeError(f"'{target}' is neither a configured server nor an existing script")
-    return [sys.executable, script_path], os.environ.copy()
+
 
 if __name__ == "__main__":
     signal.signal(signal.SIGINT, signal_handler)
@@ -216,7 +236,7 @@ if __name__ == "__main__":
     async def _main():
         if not target_arg:
             cfg = load_config()
-            servers_cfg = cfg.get("mcpServers", {}) if isinstance(cfg, dict) else {}
+            servers_cfg = cfg.get("mcpServers", {})
             all_servers = list(servers_cfg.keys())
             enabled = [name for name, entry in servers_cfg.items() if not (entry or {}).get("disabled")]
             skipped = [name for name in all_servers if name not in enabled]
@@ -224,25 +244,17 @@ if __name__ == "__main__":
                 logger.info(f"Skipping disabled servers: {', '.join(skipped)}")
             if not enabled:
                 raise RuntimeError("No enabled mcpServers found in config")
-            logger.info(f"Starting servers: {', '.join(enabled)}")
 
+            logger.info(f"Starting servers: {', '.join(enabled)}")
             tasks = []
             for t in enabled:
                 entry = servers_cfg[t]
                 typ = (entry.get("type") or entry.get("transportType") or "stdio").lower()
-
-                if typ == "ws":
-                    uri = entry.get("url")
-                    if not uri:
-                        logger.warning(f"[{t}] Skipping — missing 'url' for ws type")
-                        continue
-                    tasks.append(asyncio.create_task(connect_with_retry(uri, t)))
-                else:
-                    if not endpoint_url:
-                        logger.error("Please set the `MCP_ENDPOINT` environment variable for non-ws types")
-                        sys.exit(1)
-                    tasks.append(asyncio.create_task(connect_with_retry(endpoint_url, t)))
-
+                uri = entry.get("url") if typ == "ws" else endpoint_url
+                if not uri:
+                    logger.warning(f"[{t}] Missing connection URL for type '{typ}'")
+                    continue
+                tasks.append(asyncio.create_task(connect_with_retry(uri, t)))
             await asyncio.gather(*tasks)
         else:
             if os.path.exists(target_arg):
@@ -251,7 +263,7 @@ if __name__ == "__main__":
                     sys.exit(1)
                 await connect_with_retry(endpoint_url, target_arg)
             else:
-                logger.error("Argument must be a local Python script path. To run configured servers, run without arguments.")
+                logger.error("Invalid target. Use script path or run with no arguments.")
                 sys.exit(1)
 
     try:
