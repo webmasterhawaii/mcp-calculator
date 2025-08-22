@@ -31,17 +31,14 @@ import json
 import re
 from dotenv import load_dotenv
 
-# Auto-load environment variables from a .env file if present
 load_dotenv()
 
-# Configure logging
 logging.basicConfig(
     level=logging.INFO,
     format='%(asctime)s - %(name)s - %(levelname)s - %(message)s'
 )
 logger = logging.getLogger('MCP_PIPE')
 
-# Reconnection settings
 INITIAL_BACKOFF = 1
 MAX_BACKOFF = 600
 
@@ -143,7 +140,6 @@ def signal_handler(sig, frame):
     sys.exit(0)
 
 def substitute_env_vars(obj):
-    """Recursively replace ${VAR_NAME} with os.environ value"""
     if isinstance(obj, dict):
         return {k: substitute_env_vars(v) for k, v in obj.items()}
     elif isinstance(obj, list):
@@ -203,7 +199,6 @@ def build_server_command(target=None):
 
         raise RuntimeError(f"Unsupported server type: {typ}")
 
-    # Fallback
     script_path = target
     if not os.path.exists(script_path):
         raise RuntimeError(f"'{target}' is neither a configured server nor an existing script")
@@ -212,9 +207,6 @@ def build_server_command(target=None):
 if __name__ == "__main__":
     signal.signal(signal.SIGINT, signal_handler)
     endpoint_url = os.environ.get('MCP_ENDPOINT')
-    if not endpoint_url:
-        logger.error("Please set the `MCP_ENDPOINT` environment variable")
-        sys.exit(1)
     target_arg = sys.argv[1] if len(sys.argv) >= 2 else None
 
     async def _main():
@@ -229,10 +221,30 @@ if __name__ == "__main__":
             if not enabled:
                 raise RuntimeError("No enabled mcpServers found in config")
             logger.info(f"Starting servers: {', '.join(enabled)}")
-            tasks = [asyncio.create_task(connect_with_retry(endpoint_url, t)) for t in enabled]
+
+            tasks = []
+            for t in enabled:
+                entry = servers_cfg[t]
+                typ = (entry.get("type") or entry.get("transportType") or "stdio").lower()
+
+                if typ == "ws":
+                    uri = entry.get("url")
+                    if not uri:
+                        logger.warning(f"[{t}] Skipping — missing 'url' for ws type")
+                        continue
+                    tasks.append(asyncio.create_task(connect_with_retry(uri, t)))
+                else:
+                    if not endpoint_url:
+                        logger.error("Please set the `MCP_ENDPOINT` environment variable for non-ws types")
+                        sys.exit(1)
+                    tasks.append(asyncio.create_task(connect_with_retry(endpoint_url, t)))
+
             await asyncio.gather(*tasks)
         else:
             if os.path.exists(target_arg):
+                if not endpoint_url:
+                    logger.error("Please set the `MCP_ENDPOINT` environment variable")
+                    sys.exit(1)
                 await connect_with_retry(endpoint_url, target_arg)
             else:
                 logger.error("Argument must be a local Python script path. To run configured servers, run without arguments.")
