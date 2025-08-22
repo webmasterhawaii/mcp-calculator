@@ -1,8 +1,8 @@
 {
   "mcpServers": {
-    "n8n-endpoint": {
+    "secure-wss-bridge": {
       "type": "ws",
-      "url": "wss://api.xiaozhi.me/mcp/?token=eyJhbGciOiJFUzI1NiIsInR5cCI6IkpXVCJ9...",
+      "url": "${WSS_ENDPOINT_URL}",
       "disabled": false
     }
   }
