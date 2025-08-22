@@ -71,7 +71,7 @@ async def connect_to_server(uri, target):
 
             # Get command or run noop if ws type
             cmd, env = build_server_command(target)
-            if cmd == ["noop"]\:
+            if cmd == ["noop"]:
                 logger.info(f"[{target}] No-op bridge active, holding connection...")
                 await asyncio.Future()
                 return
